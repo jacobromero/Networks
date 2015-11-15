@@ -1,40 +1,10 @@
 import java.io.*;
 import java.net.*;
-import java.util.Arrays;
-import java.util.Scanner;
 
 public class Receiver {
-	private String serverurl = "127.0.0.1";
+	private String serverurl = "192.168.1.1";
 	private int serverport = 12345;
 	private Socket socket = null;
-	
-	public void connectToServer(){
-		if(serverurl.equals("127.0.0.1")){
-			System.out.println("WARNING CONNECTION ON LOOPBACK ADDRESS(127.0.0.1)");
-		}
-		
-		//need to change so the user can change port number
-		while(serverport == -1){
-			System.out.println("Please enter a valid port");
-		}
-		
-		boolean flag = true;
-		while(flag){
-			try {
-				socket = new Socket(serverurl, serverport);
-				//10 second timeout
-				socket.setSoTimeout(10000);
-				
-				System.out.println("Connected.");
-				flag = false;
-			} catch (ConnectException e) {
-				System.out.println("Continuing to listen...");
-			}
-			catch(Exception e){
-				System.out.println("Something unexpected happened... \n" + e.getMessage());
-			}
-		}
-	}
 	
 	public void setServerUrl(String url){
 		serverurl = url;
@@ -44,11 +14,30 @@ public class Receiver {
 		serverport = portNum;
 	}
 	
-	public void closeConnection(){
-		try {
-			socket.close();
-		} catch (IOException ioe) {
-			ioe.printStackTrace();
+	//set up connection to the server
+	public void connectToServer(){		
+		//need to change so the user can change port number
+		while(serverport == -1){
+			System.out.println("Please enter a valid port");
+		}
+		
+		boolean flag = true;
+		while(flag){
+			try {
+				socket = new Socket(serverurl, serverport);
+				
+				//10 second timeout
+				socket.setSoTimeout(10000);
+				
+				System.out.println("Connected.");
+				flag = false;
+			} catch (ConnectException e) {
+				//continue to search for server with specified ip and port open
+				System.out.println("Continuing to listen...");
+			}
+			catch(Exception e){
+				System.out.println("Something unexpected happened... \n" + e.getMessage());
+			}
 		}
 	}
 	
@@ -70,8 +59,6 @@ public class Receiver {
 	      
 	      //read the entire checksum of the file and save it for later.
 	      in.read(fileSum, 0, fileSum.length);
-	      
-//	      System.out.println(Arrays.toString(fileSum));
 	      
 	      //read one packet from the network
 	      int bytesRead = in.read(rawData, 0, rawData.length);
@@ -107,12 +94,15 @@ public class Receiver {
 	      System.out.println("Reveived file --- Closing connection.");
 	      return receievedData; 
 	    }
+	    //cannot find host
 	    catch(UnknownHostException unhe){
 	      System.out.println("UnknownHostException: " + unhe.getMessage());
 	    }
+	    //connection interrupted/timeout
 	    catch(InterruptedIOException intioe){
 	      System.out.println("Timeout while attempting to establish socket connection.");
 	    }
+	    //input/output error
 	    catch(IOException ioe){
 	      System.out.println("IOException: " + ioe.getMessage());
 	    }
@@ -125,6 +115,14 @@ public class Receiver {
 	    }
 	    
 	    return null;
+	}
+	
+	public void closeConnection(){
+		try {
+			socket.close();
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+		}
 	}
 
 }

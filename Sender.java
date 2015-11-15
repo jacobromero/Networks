@@ -27,9 +27,8 @@ public class Sender {
 				//sendFile(filePath)
 				//sendText();
 			//after while close server and exit
-//			System.out.println("Waiting for connections");
-//			closeConnection();
-//			System.out.println("Done");
+			//System.out.println("Waiting for connections");
+			//closeConnection();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -49,7 +48,6 @@ public class Sender {
   }
 
   //used this method to sendData encrypted bytes to receiver.
-  //TODO chnge b, filesum into one object, see filePacket
   public void sendByte(FilePacket sendData) {
 	  try{
 		  //create byte array the length of the file we are sending
@@ -93,12 +91,16 @@ public class Sender {
 		  bis.close();
 		  return;
 	    }
+	  	//cannot find host
 	    catch(UnknownHostException unhe){
 	      System.out.println("UnknownHostException: " + unhe.getMessage());
 	    }
+	  	//connection interrupted/timeout
 	    catch(InterruptedIOException intioe){
 	      System.out.println("Timeout while attempting to establish socket connection.");
-	    }catch(IOException ioe){
+	    }
+	  	//input/output error
+	  	catch(IOException ioe){
 	      System.out.println();
 	    }
 	    finally{
