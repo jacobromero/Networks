@@ -1,44 +1,31 @@
 import java.io.*;
 import java.net.*;
+import java.util.Scanner;
 
-public class Receiver {
-	private String serverurl = "192.168.1.1";
-	private int serverport = 12345;
+public class Receiver implements Runnable{
+	private int port = 12345;
+	private ServerSocket server = null;
 	private Socket socket = null;
-	
-	public void setServerUrl(String url){
-		serverurl = url;
-	}
-	
-	public void setPort(int portNum){
-		serverport = portNum;
-	}
+	boolean flag = true;
 	
 	//set up connection to the server
-	public void connectToServer(){		
+	public void listen(){		
 		//need to change so the user can change port number
-		while(serverport == -1){
+		while(port == -1){
 			System.out.println("Please enter a valid port");
 		}
-		
-		boolean flag = true;
-		while(flag){
-			try {
-				socket = new Socket(serverurl, serverport);
-				
-				//10 second timeout
-				socket.setSoTimeout(10000);
-				
-				System.out.println("Connected.");
-				flag = false;
-			} catch (ConnectException e) {
-				//continue to search for server with specified ip and port open
-				System.out.println("Continuing to listen...");
-			}
-			catch(Exception e){
-				System.out.println("Something unexpected happened... \n" + e.getMessage());
-			}
+		try {
+			server = new ServerSocket(port);
+			socket = server.accept();
+		} catch (ConnectException e) {
+			//continue to search for server with specified ip and port open
+			System.out.println("Continuing to listen...");
 		}
+		catch(Exception e){
+			System.out.println("Something unexpected happened... \n" + e.getMessage());
+		}
+		
+		System.out.println("Connected.");
 	}
 	
 	//use this method to received encrypted/ascii armored bytes, then pass them up to be decrypted
@@ -125,4 +112,77 @@ public class Receiver {
 		}
 	}
 
+	public void readText(){
+		try{
+			BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			
+			String clientText = "";
+			while(clientText.compareToIgnoreCase("disconnect") != 0 && clientText != null){
+				clientText = input.readLine();
+			
+				System.out.println(clientText);
+			}			
+			
+			shutDown();
+		}
+		catch(IOException ioe){
+			ioe.getMessage();
+		}
+		catch(NullPointerException npe){
+			System.out.println("Client Disconnected");
+		}
+	}
+	
+	public void sendText(){
+  		Scanner kb = new Scanner(System.in);
+  		
+  		try{
+  			PrintWriter pw = new PrintWriter(socket.getOutputStream(), true);
+  			
+  			String userInput = "";
+  			
+  			while(userInput.compareToIgnoreCase("disconnect") != 0){
+  				System.out.print("Message to send: ");
+  				userInput = kb.nextLine();
+  				
+  				pw.println(userInput);
+  			}
+  			
+//  			pw.println("");
+  			pw.close();
+  			kb.close();
+  		}
+  		catch(IOException ioe){
+  			System.out.println("Input/Output Error: " + ioe.getMessage());
+  		}
+  	}
+	
+	public void shutDown(){		
+		try {
+			System.out.println("Disconnecting...");
+			server.close();
+			System.out.println("Done.");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void run(){
+		try{
+			BufferedReader readData = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			
+			String clientText = "";
+			while(clientText.compareToIgnoreCase("disconnect") != 0 && clientText != null){
+				clientText = readData.readLine();
+			
+				System.out.println("\nMessage from Sender: " + clientText);
+				System.out.print("Message to send: ");
+			}			
+			
+			shutDown();
+		}
+		catch(IOException ioe){
+			ioe.getMessage();
+		}
+	}
 }

@@ -2,35 +2,36 @@ import java.io.*;
 import java.net.*;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Scanner;
 
-public class Sender {
+public class Sender implements Runnable{
+	private String url = "localhost";
 	private int port  = 12345;
-	private ServerSocket server = null;
     private Socket socket = null;
     
-	public void runServer(){
+	public void searchForHost(){
 		//need to change so the user can change port number
 		while(port == -1){
 			System.out.println("Please set a port to listen on.");
 		}
 		
-		try {
-			server = new ServerSocket(port);
-			socket = server.accept();
-			
-			//read in user name & password here
-			//call validate to make sure they have access
-			//exit if they are invalid
-			
-			//can while loop to allow change mid runtime?
-				//either choose to sendData text or sendData a file here
-				//sendFile(filePath)
-				//sendText();
-			//after while close server and exit
-			//System.out.println("Waiting for connections");
-			//closeConnection();
-		} catch (IOException e) {
-			e.printStackTrace();
+		boolean flag = true;
+		while(flag){
+			try {
+				socket = new Socket(url, port);
+				
+				//10 second timeout
+				socket.setSoTimeout(0);
+				
+				System.out.println("Connected.");
+				flag = false;
+			} catch (ConnectException e) {
+				//continue to search for server with specified ip and port open
+				System.out.println("Continuing to listen...");
+			}
+			catch(Exception e){
+				System.out.println("Something unexpected happened... \n" + e.getMessage());
+			}
 		}
 	}
   
@@ -42,10 +43,7 @@ public class Sender {
 		System.out.println("Something happened: " + e);
 	}
   }
-  
-  public void setPort(int portNum){
-	  port = portNum;
-  }
+ 
 
   //used this method to sendData encrypted bytes to receiver.
   public void sendByte(FilePacket sendData) {
@@ -106,10 +104,58 @@ public class Sender {
 	    finally{
 	      try{
 	        socket.close();
-	        server.close();
 	      }catch(IOException ioe){
 	        System.out.println("IOException: " + ioe.getMessage());
 	      }
 	    }
   	}
+  
+  	public void sendText(){
+  		Scanner kb = new Scanner(System.in);
+  		
+  		try{
+  			PrintWriter pw = new PrintWriter(socket.getOutputStream(), true);
+  			
+  			String userInput = "";
+  			
+  			while(userInput.compareToIgnoreCase("disconnect") != 0){
+  				System.out.print("Message to send: ");
+  				userInput = kb.nextLine();
+  				
+  				pw.println(userInput);
+  			}
+  			
+//  			pw.println("");
+  			pw.close();
+  			kb.close();
+  		}
+  		catch(IOException ioe){
+  			System.out.println("Input/Output Error: " + ioe.getMessage());
+  		}
+  	}
+  	
+	public void setServerUrl(String url){
+		this.url = url;
+	}
+	
+	public void setPort(int portNum){
+		this.port = portNum;
+	}
+
+	public void run(){
+		try{
+			BufferedReader readData = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			
+			String clientText = "";
+			while(clientText.compareToIgnoreCase("disconnect") != 0 && clientText != null){
+				clientText = readData.readLine();
+			
+				System.out.println("\nMessage from Receiver: " + clientText);
+				System.out.print("Message to send: ");
+			}			
+		}
+		catch(IOException ioe){
+			ioe.getMessage();
+		}
+	}
 } 
