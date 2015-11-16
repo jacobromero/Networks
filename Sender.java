@@ -1,13 +1,13 @@
 import java.io.*;
 import java.net.*;
-import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Scanner;
 
 public class Sender implements Runnable{
 	private String url = "localhost";
 	private int port  = 12345;
     private Socket socket = null;
+    private PrintWriter pw = null;
+    
     
 	public void searchForHost(){
 		//need to change so the user can change port number
@@ -19,11 +19,12 @@ public class Sender implements Runnable{
 		while(flag){
 			try {
 				socket = new Socket(url, port);
-				
-				//10 second timeout
 				socket.setSoTimeout(0);
 				
 				System.out.println("Connected.");
+				
+				//open printwriter for writing to socket
+				pw = new PrintWriter(socket.getOutputStream(), true);
 				flag = false;
 			} catch (ConnectException e) {
 				//continue to search for server with specified ip and port open
@@ -113,25 +114,24 @@ public class Sender implements Runnable{
   	public void sendText(){
   		Scanner kb = new Scanner(System.in);
   		
-  		try{
-  			PrintWriter pw = new PrintWriter(socket.getOutputStream(), true);
-  			
-  			String userInput = "";
-  			
-  			while(userInput.compareToIgnoreCase("disconnect") != 0){
-  				System.out.print("Message to send: ");
-  				userInput = kb.nextLine();
-  				
-  				pw.println(userInput);
-  			}
-  			
-//  			pw.println("");
-  			pw.close();
-  			kb.close();
-  		}
-  		catch(IOException ioe){
-  			System.out.println("Input/Output Error: " + ioe.getMessage());
-  		}
+  		String userInput = "";
+		
+		while(userInput.compareToIgnoreCase("disconnect") != 0){
+			System.out.print("Message to send: ");
+			userInput = kb.nextLine();
+			
+			if(pw == null){
+				kb.close();
+				return;
+			}
+			
+			pw.println(userInput);
+		}
+		
+		pw.close();
+		kb.close();
+		
+		shutDown();
   	}
   	
 	public void setServerUrl(String url){
@@ -142,20 +142,31 @@ public class Sender implements Runnable{
 		this.port = portNum;
 	}
 
+	//async socket reader
 	public void run(){
 		try{
-			BufferedReader readData = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			BufferedReader readText = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			
 			String clientText = "";
-			while(clientText.compareToIgnoreCase("disconnect") != 0 && clientText != null){
-				clientText = readData.readLine();
 			
-				System.out.println("\nMessage from Receiver: " + clientText);
-				System.out.print("Message to send: ");
+			while(true){
+				clientText = readText.readLine();
+				
+				System.out.println(clientText);
 			}			
 		}
 		catch(IOException ioe){
 			ioe.getMessage();
+		}
+	}
+	
+	public void shutDown(){		
+		try {
+			System.out.println("\nDisconnecting...");
+			socket.close();
+			System.out.println("Done.");
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 } 

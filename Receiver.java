@@ -6,7 +6,7 @@ public class Receiver implements Runnable{
 	private int port = 12345;
 	private ServerSocket server = null;
 	private Socket socket = null;
-	boolean flag = true;
+	private PrintWriter pw = null;
 	
 	//set up connection to the server
 	public void listen(){		
@@ -17,6 +17,9 @@ public class Receiver implements Runnable{
 		try {
 			server = new ServerSocket(port);
 			socket = server.accept();
+			
+			//open printwriter for writing to socket
+			pw = new PrintWriter(socket.getOutputStream(), true);
 		} catch (ConnectException e) {
 			//continue to search for server with specified ip and port open
 			System.out.println("Continuing to listen...");
@@ -104,85 +107,35 @@ public class Receiver implements Runnable{
 	    return null;
 	}
 	
-	public void closeConnection(){
-		try {
-			socket.close();
-		} catch (IOException ioe) {
-			ioe.printStackTrace();
-		}
-	}
-
-	public void readText(){
+	public void sendText(String toSend){
+			pw.println(toSend);
+  	}
+	
+	//async socket reader
+	public void run(){
 		try{
-			BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			BufferedReader readText = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			
 			String clientText = "";
-			while(clientText.compareToIgnoreCase("disconnect") != 0 && clientText != null){
-				clientText = input.readLine();
-			
+
+			while(true){
+				clientText = readText.readLine();
+				
 				System.out.println(clientText);
 			}			
-			
-			shutDown();
 		}
 		catch(IOException ioe){
 			ioe.getMessage();
 		}
-		catch(NullPointerException npe){
-			System.out.println("Client Disconnected");
-		}
 	}
-	
-	public void sendText(){
-  		Scanner kb = new Scanner(System.in);
-  		
-  		try{
-  			PrintWriter pw = new PrintWriter(socket.getOutputStream(), true);
-  			
-  			String userInput = "";
-  			
-  			while(userInput.compareToIgnoreCase("disconnect") != 0){
-  				System.out.print("Message to send: ");
-  				userInput = kb.nextLine();
-  				
-  				pw.println(userInput);
-  			}
-  			
-//  			pw.println("");
-  			pw.close();
-  			kb.close();
-  		}
-  		catch(IOException ioe){
-  			System.out.println("Input/Output Error: " + ioe.getMessage());
-  		}
-  	}
 	
 	public void shutDown(){		
 		try {
-			System.out.println("Disconnecting...");
+			System.out.println("\nDisconnecting...");
 			server.close();
 			System.out.println("Done.");
 		} catch (IOException e) {
 			e.printStackTrace();
-		}
-	}
-
-	public void run(){
-		try{
-			BufferedReader readData = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-			
-			String clientText = "";
-			while(clientText.compareToIgnoreCase("disconnect") != 0 && clientText != null){
-				clientText = readData.readLine();
-			
-				System.out.println("\nMessage from Sender: " + clientText);
-				System.out.print("Message to send: ");
-			}			
-			
-			shutDown();
-		}
-		catch(IOException ioe){
-			ioe.getMessage();
 		}
 	}
 }
