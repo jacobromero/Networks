@@ -7,13 +7,7 @@ public class RecDriver {
 		
 		Thread t = new Thread(r);
 		t.start();
-		r.sendText();
-
-		FilePacket test = r.recieveByteArray();
-	
-
-		//debug code
-		String str = new String(test.fileArray).replaceAll("\u0000", "");
-		System.out.println(str);
+		
+		r.shutDown();
 	}
 }

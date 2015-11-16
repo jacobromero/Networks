@@ -6,7 +6,9 @@ public class SendDriver {
     	
     	Thread t = new Thread(s);
 		t.start();
-
-    	t.interrupt();
+		
+		s.sendText("Hi");
+    	
+//    	s.shutDown();
 	}
 }

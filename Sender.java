@@ -1,6 +1,5 @@
 import java.io.*;
 import java.net.*;
-import java.util.Scanner;
 
 public class Sender implements Runnable{
 	private String url = "localhost";
@@ -111,27 +110,8 @@ public class Sender implements Runnable{
 	    }
   	}
   
-  	public void sendText(){
-  		Scanner kb = new Scanner(System.in);
-  		
-  		String userInput = "";
-		
-		while(userInput.compareToIgnoreCase("disconnect") != 0){
-			System.out.print("Message to send: ");
-			userInput = kb.nextLine();
-			
-			if(pw == null){
-				kb.close();
-				return;
-			}
-			
-			pw.println(userInput);
-		}
-		
-		pw.close();
-		kb.close();
-		
-		shutDown();
+  	public void sendText(String toSend){
+		pw.println(toSend);	
   	}
   	
 	public void setServerUrl(String url){
@@ -148,11 +128,16 @@ public class Sender implements Runnable{
 			BufferedReader readText = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			
 			String clientText = "";
-			
+
 			while(true){
 				clientText = readText.readLine();
 				
-				System.out.println(clientText);
+				//change this preform an action if a certian string is read
+				//ie if it reads "Encryption = True" set some boolean Encryption to true
+				if(clientText != null)
+					System.out.println(clientText);
+				else
+					return;
 			}			
 		}
 		catch(IOException ioe){

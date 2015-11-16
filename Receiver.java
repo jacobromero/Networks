@@ -1,6 +1,5 @@
 import java.io.*;
 import java.net.*;
-import java.util.Scanner;
 
 public class Receiver implements Runnable{
 	private int port = 12345;
@@ -14,6 +13,7 @@ public class Receiver implements Runnable{
 		while(port == -1){
 			System.out.println("Please enter a valid port");
 		}
+		
 		try {
 			server = new ServerSocket(port);
 			socket = server.accept();
@@ -121,7 +121,12 @@ public class Receiver implements Runnable{
 			while(true){
 				clientText = readText.readLine();
 				
-				System.out.println(clientText);
+				//change this preform an action if a certian string is read
+				//ie if it reads "Encryption = True" set some boolean Encryption to true
+				if(clientText != null)
+					System.out.println(clientText);
+				else
+					return;
 			}			
 		}
 		catch(IOException ioe){
@@ -132,6 +137,7 @@ public class Receiver implements Runnable{
 	public void shutDown(){		
 		try {
 			System.out.println("\nDisconnecting...");
+			socket.close();
 			server.close();
 			System.out.println("Done.");
 		} catch (IOException e) {
