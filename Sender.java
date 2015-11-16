@@ -5,7 +5,14 @@ public class Sender implements Runnable{
 	private String url = "localhost";
 	private int port  = 12345;
     private Socket socket = null;
+    
     private PrintWriter pw = null;
+    
+    //TODO Discuss moving settings to another class for accessing.
+    //receiver settings
+    public boolean tansmissionSuccess = true;
+    public boolean base64Encode = false;
+    public boolean failIntentionally = false;
     
     
 	public void searchForHost(){
@@ -65,6 +72,14 @@ public class Sender implements Runnable{
 		  while(bytes != -1){
 			  //chunkChecksum sum the 1kb chunk 'data'
 			  chunkChecksum = saltMD5.computeMD5(data);
+			  
+			  //if we want to fail the transmission intentionally
+			  if(failIntentionally){
+				  chunkChecksum[0] = (byte) (chunkChecksum[0] + 1);
+				  
+				  //only fail one checksum, can fail all of them if we want
+				  failIntentionally = false;
+			  }
 			  
 			  //write both data and data checksum into a single array(chunk)
 			  baos.write(data);

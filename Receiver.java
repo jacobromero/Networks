@@ -68,6 +68,7 @@ public class Receiver implements Runnable{
 		    	  for(int i = 0; i < checksum.length; i++){
 		    		  if(checksum[i] != compare[i]){
 		    			  System.out.println("Failed");
+		    			  pw.println("Transmission = Failed");
 		    			  return null;
 		    		  }
 		    	  }
