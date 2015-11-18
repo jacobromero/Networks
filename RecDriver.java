@@ -1,4 +1,6 @@
 
+
+
 public class RecDriver {
 
 	public static void main(String[] args) throws InterruptedException {
@@ -7,6 +9,7 @@ public class RecDriver {
 		
 		Thread t = new Thread(r);
 		t.start();
+		r.stopReadingText();
 		
 		r.shutDown();
 	}

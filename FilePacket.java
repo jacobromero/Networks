@@ -10,4 +10,9 @@ public class FilePacket {
 		fileArray = file;
 		fileChecksum = checksum;
 	}
+	
+	public FilePacket(){
+		fileArray = null;
+		fileChecksum = null;
+	}
 }

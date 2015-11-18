@@ -1,11 +1,28 @@
 import java.io.*;
 import java.net.*;
+import java.util.LinkedList;
+import java.util.Queue;
 
 public class Receiver implements Runnable{
-	private int port = 12345;
+	protected int port;
 	private ServerSocket server = null;
 	private Socket socket = null;
 	private PrintWriter pw = null;
+	
+	public Queue<String> messages = new LinkedList<String>();
+	public boolean read = true;
+	
+	//Constructors
+	public Receiver(){
+		port = 12345;
+	}
+	public Receiver(int p){
+		this.port = p;
+	}
+	
+	public void setPort(int portNum){
+		this.port = portNum;
+	}
 	
 	//set up connection to the server
 	public void listen(){		
@@ -32,7 +49,7 @@ public class Receiver implements Runnable{
 	}
 	
 	//use this method to received encrypted/ascii armored bytes, then pass them up to be decrypted
-	public FilePacket recieveByteArray(){
+	public FilePacket receiveData(){
 		//entire file checksum
 		byte[] fileSum = new byte[16];
 		
@@ -48,7 +65,7 @@ public class Receiver implements Runnable{
 	      ByteArrayOutputStream baos = new ByteArrayOutputStream();
 	      
 	      //read the entire checksum of the file and save it for later.
-	      in.read(fileSum, 0, fileSum.length);
+//	      in.read(fileSum, 0, fileSum.length);
 	      
 	      //read one packet from the network
 	      int bytesRead = in.read(rawData, 0, rawData.length);
@@ -58,9 +75,9 @@ public class Receiver implements Runnable{
 	    		  ByteArrayInputStream bis = new ByteArrayInputStream(rawData);
 		    	  
 	    		  
-	    		  bis.read(data, 0, data.length);
-	    		  bis.read(checksum, 0, checksum.length);
-		    	  
+	    		  bis.read(data, 0, bytesRead - 16);
+	    		  bis.read(checksum, 0, 16);
+		    	 
 	    		  //compute the md5 of the data portion of the packet to verify integrity
 		    	  byte[] compare = saltMD5.computeMD5(data);	
 		    	  
@@ -82,7 +99,7 @@ public class Receiver implements Runnable{
 	      baos.close();
 	      
 	      FilePacket receievedData = new FilePacket(fileData, fileSum);
-	      System.out.println("Reveived file --- Closing connection.");
+	      System.out.println("Received file");
 	      return receievedData; 
 	    }
 	    //cannot find host
@@ -119,13 +136,14 @@ public class Receiver implements Runnable{
 			
 			String clientText = "";
 
-			while(true){
+			while(read){
 				clientText = readText.readLine();
 				
 				//change this preform an action if a certian string is read
 				//ie if it reads "Encryption = True" set some boolean Encryption to true
 				if(clientText != null)
-					System.out.println(clientText);
+//					System.out.println(clientText);
+					messages.add(clientText);
 				else
 					return;
 			}			
@@ -133,6 +151,14 @@ public class Receiver implements Runnable{
 		catch(IOException ioe){
 			ioe.getMessage();
 		}
+	}
+	
+	public void stopReadingText(){
+		read = false;
+	}
+	
+	public void restartReadingText(){
+		read = true;
 	}
 	
 	public void shutDown(){		

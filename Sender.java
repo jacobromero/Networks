@@ -1,21 +1,40 @@
 import java.io.*;
 import java.net.*;
+import java.util.LinkedList;
+import java.util.Queue;
+
 
 public class Sender implements Runnable{
-	private String url = "localhost";
-	private int port  = 12345;
+	protected String url;
+	protected int port;
     private Socket socket = null;
-    
     private PrintWriter pw = null;
     
-    //TODO Discuss moving settings to another class for accessing.
-    //receiver settings
-    public boolean tansmissionSuccess = true;
-    public boolean base64Encode = false;
     public boolean failIntentionally = false;
+    public boolean read = true;
+    public Queue<String> messages = new LinkedList<String>();
+    
+    //Constructors
+    public Sender(){
+    	this.url = "localhost";
+    	this.port= 12345;
+    }
+    
+    public Sender(int port){
+    	this.port = port;
+    }
+    
+    public Sender(int port, String ip){
+    	this.port = port;
+    	this.url = ip;
+    }
+    
+    public Sender(String ip){
+    	this.url = ip;
+    }
     
     
-	public void searchForHost(){
+	public void searchForClients(){
 		//need to change so the user can change port number
 		while(port == -1){
 			System.out.println("Please set a port to listen on.");
@@ -53,7 +72,7 @@ public class Sender implements Runnable{
  
 
   //used this method to sendData encrypted bytes to receiver.
-  public void sendByte(FilePacket sendData) {
+  public void sendData(FilePacket sendData) {
 	  try{
 		  //create byte array the length of the file we are sending
 		  //can specify the length of the array to sendData in chunks, here 1000 bytes = 1kb chunks
@@ -65,7 +84,7 @@ public class Sender implements Runnable{
 		  OutputStream os = socket.getOutputStream();
 		  
 		  //write the overall file checksum into the stream, to be read by the receiver. (this may or may not be corrupted on sender side
-		  os.write(sendData.fileChecksum, 0, sendData.fileChecksum.length);
+//		  os.write(sendData.fileChecksum, 0, sendData.fileChecksum.length);
 		  
 		  byte[] chunkChecksum;
 		  int bytes = bis.read(data, 0, data.length);
@@ -102,6 +121,7 @@ public class Sender implements Runnable{
 		  
 		  os.close();
 		  bis.close();
+		  baos.close();
 		  return;
 	    }
 	  	//cannot find host
@@ -144,13 +164,13 @@ public class Sender implements Runnable{
 			
 			String clientText = "";
 
-			while(true){
+			while(read){
 				clientText = readText.readLine();
 				
 				//change this preform an action if a certian string is read
 				//ie if it reads "Encryption = True" set some boolean Encryption to true
 				if(clientText != null)
-					System.out.println(clientText);
+					messages.add(clientText);
 				else
 					return;
 			}			
@@ -158,6 +178,14 @@ public class Sender implements Runnable{
 		catch(IOException ioe){
 			ioe.getMessage();
 		}
+	}
+	
+	public void stopReadingText(){
+		read = false;
+	}
+	
+	public void restartReadingText(){
+		read = true;
 	}
 	
 	public void shutDown(){		
