@@ -6,23 +6,10 @@ public class SendDriver {
     	s.searchForClients();
     	
     	Thread t = new Thread(s);
-		t.start();
-		
-		s.sendText("hey bud");
+		t.start();	
 		
 		s.stopReadingText();
     	
-    	
-		String test = "hihihihih";
-		byte[] a = test.getBytes();
-		
-//		System.out.println(Arrays.toString(a));
-		
-		FilePacket f = new FilePacket();
-		f.fileArray = a;
-		f.fileChecksum = saltMD5.computeMD5(a);
-		
-//		s.sendData(f);
     	s.shutDown();
 	}
 }
