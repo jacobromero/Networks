@@ -84,36 +84,35 @@ public class Sender implements Runnable{
 		  OutputStream os = socket.getOutputStream();
 		  
 		  //write the overall file checksum into the stream, to be read by the receiver. (this may or may not be corrupted on sender side
-//		  os.write(sendData.fileChecksum, 0, sendData.fileChecksum.length);
+		  os.write(sendData.fileChecksum, 0, sendData.fileChecksum.length);
 		  
-		  byte[] chunkChecksum;
+		  byte[] chunkChecksum = new byte[16];
 		  int bytes = bis.read(data, 0, data.length);
 		  while(bytes != -1){
 			  //chunkChecksum sum the 1kb chunk 'data'
 			  chunkChecksum = saltMD5.computeMD5(data);
 			  
 			  //if we want to fail the transmission intentionally
-			  if(failIntentionally){
-				  chunkChecksum[0] = (byte) (chunkChecksum[0] + 1);
-				  
-				  //only fail one checksum, can fail all of them if we want
-				  failIntentionally = false;
-			  }
+//			  if(failIntentionally){
+//				  chunkChecksum[0] = (byte) (chunkChecksum[0] + 1);
+//				  
+//				  //only fail one checksum, can fail all of them if we want
+//				  failIntentionally = false;
+//			  }
 			  
 			  //write both data and data checksum into a single array(chunk)
 			  baos.write(data);
 			  baos.write(chunkChecksum);
 			  byte[] toSend = baos.toByteArray();
 			  
-			  
+			  baos.flush();
 			  //Encrypt the chunk(data and hash)
-			  toSend = XOREncoding.encode(toSend, "key.txt");
+//			  toSend = XOREncoding.encode(toSend, "key.txt");
 			  
 			  //write the chunk to the output stream
 			  os.write(toSend);
-			  
+			  os.write(data);
 			  //clear data on the byte output stream
-			  baos.flush();
 			  os.flush();
 
 			  bytes = bis.read(data, 0, data.length);

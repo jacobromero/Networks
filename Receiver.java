@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.*;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -48,6 +49,37 @@ public class Receiver implements Runnable{
 		System.out.println("Connected.");
 	}
 	
+	public byte[] updateRec(){
+		byte[] fileByte = new byte[2608];
+		
+		FileOutputStream fos;
+		try {
+			InputStream is = socket.getInputStream();
+			fos = new FileOutputStream("text2.txt");
+			BufferedOutputStream bos = new BufferedOutputStream(fos);
+			
+			is.read(fileByte, 0, fileByte.length);
+			
+			bos.write(fileByte, 0, 2608);
+			bos.flush();
+			
+			fos.close();
+			is.close();
+			bos.close();
+			
+			return fileByte;
+			
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return null;
+	}
+	
 	//use this method to received encrypted/ascii armored bytes, then pass them up to be decrypted
 	public FilePacket receiveData(){
 		//entire file checksum
@@ -65,36 +97,46 @@ public class Receiver implements Runnable{
 	      ByteArrayOutputStream baos = new ByteArrayOutputStream();
 	      
 	      //read the entire checksum of the file and save it for later.
-//	      in.read(fileSum, 0, fileSum.length);
+	      in.read(fileSum, 0, fileSum.length);
 	      
 	      //read one packet from the network
 	      int bytesRead = in.read(rawData, 0, rawData.length);
 	      while(bytesRead != -1){	    	  
-	    		  rawData = XOREncoding.decodeByte(rawData, "key.txt");
+//	    		  rawData = XOREncoding.decodeByte(rawData, "key.txt");
 	    		  
 	    		  ByteArrayInputStream bis = new ByteArrayInputStream(rawData);
 		    	  
 	    		  
-	    		  bis.read(data, 0, bytesRead - 16);
-	    		  bis.read(checksum, 0, 16);
-		    	 
+	    		  bis.read(data, 0, data.length);
+//	    		  bis.read(checksum, 0, 16);
+
 	    		  //compute the md5 of the data portion of the packet to verify integrity
 		    	  byte[] compare = saltMD5.computeMD5(data);	
 		    	  
 		    	  //compare data checksum with packet checksum
-		    	  for(int i = 0; i < checksum.length; i++){
-		    		  if(checksum[i] != compare[i]){
-		    			  System.out.println("Failed");
-		    			  pw.println("Transmission = Failed");
-		    			  return null;
-		    		  }
-		    	  }
-		    	 
+//		    	  for(int i = 0; i < checksum.length; i++){
+//		    		  if(checksum[i] != compare[i]){
+//		    			  System.out.println("Failed");
+//		    			  pw.println("Transmission = Failed");
+//		    			  return null;
+//		    		  }
+//		    	  }
+		    	  
+		    	  bis.close();
 		    	  baos.write(data);
+		    	  baos.flush();
 		    	  bytesRead = in.read(rawData, 0, rawData.length);
 	      }
 	      
 	      byte[] fileData = baos.toByteArray();
+	      
+	      for(int i = 0; i < fileData.length; i++){
+	    	  if(fileData[i] == '\u0000'){
+	    		  fileData = Arrays.copyOf(fileData, i);
+	    		  break;
+	    	  }
+	      }
+//	      fileData = Arrays.copyOf(fileData, 2607);
 	      
 	      baos.close();
 	      
