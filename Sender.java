@@ -79,7 +79,7 @@ public class Sender implements Runnable{
 		  byte[] data = new byte[1000];
 		  			  
 		  ByteArrayInputStream bis = new ByteArrayInputStream(sendData.fileArray);
-		  ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		  
 		  
 		  OutputStream os = socket.getOutputStream();
 		  
@@ -93,25 +93,18 @@ public class Sender implements Runnable{
 			  chunkChecksum = saltMD5.computeMD5(data);
 			  
 			  //if we want to fail the transmission intentionally
-//			  if(failIntentionally){
-//				  chunkChecksum[0] = (byte) (chunkChecksum[0] + 1);
-//				  
-//				  //only fail one checksum, can fail all of them if we want
-//				  failIntentionally = false;
-//			  }
+			  if(failIntentionally){
+				  chunkChecksum[0] = (byte) (chunkChecksum[0] + 1);
+				  
+				  //only fail one checksum, can fail all of them if we want
+				  failIntentionally = false;
+			  }
 			  
-			  //write both data and data checksum into a single array(chunk)
-			  baos.write(data);
-			  baos.write(chunkChecksum);
-			  byte[] toSend = baos.toByteArray();
 			  
-			  baos.flush();
-			  //Encrypt the chunk(data and hash)
-//			  toSend = XOREncoding.encode(toSend, "key.txt");
+			  //write the chunk to the output stream, encrypted
+			  os.write(XOREncoding.encode(data, "key.txt"));
+			  os.write(XOREncoding.encode(chunkChecksum, "key.txt"));
 			  
-			  //write the chunk to the output stream
-			  os.write(toSend);
-			  os.write(data);
 			  //clear data on the byte output stream
 			  os.flush();
 
@@ -120,7 +113,6 @@ public class Sender implements Runnable{
 		  
 		  os.close();
 		  bis.close();
-		  baos.close();
 		  return;
 	    }
 	  	//cannot find host

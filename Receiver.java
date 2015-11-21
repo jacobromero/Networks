@@ -1,6 +1,5 @@
 import java.io.*;
 import java.net.*;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -49,122 +48,57 @@ public class Receiver implements Runnable{
 		System.out.println("Connected.");
 	}
 	
-	public byte[] updateRec(){
-		byte[] fileByte = new byte[2608];
-		
-		FileOutputStream fos;
+	//use this method to received encrypted/ascii armored bytes, then pass them up to be decrypted
+	public FilePacket receiveData(){
 		try {
-			InputStream is = socket.getInputStream();
-			fos = new FileOutputStream("text2.txt");
-			BufferedOutputStream bos = new BufferedOutputStream(fos);
+			byte[] data = new byte[1000];
+			byte[] chunkcheck = new byte[16];
+			byte[] fileSum = new byte[16];
 			
-			is.read(fileByte, 0, fileByte.length);
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			BufferedInputStream buf = new BufferedInputStream(socket.getInputStream());
 			
-			bos.write(fileByte, 0, 2608);
-			bos.flush();
+			//read in entire file checksum
+			buf.read(fileSum, 0, fileSum.length);
 			
-			fos.close();
-			is.close();
-			bos.close();
+			//read in data portion of the packet
+			int bytes = buf.read(data);
+			while(bytes != -1){
+				
+				//read in checksum of the packet
+				buf.read(chunkcheck);
+				
+				//decrypt both files
+				data = XOREncoding.decodeByte(data, "key.txt");
+				chunkcheck = XOREncoding.decodeByte(chunkcheck, "key.txt");
+				
+				//compare data checksum with packet checksum
+				byte[] compare = saltMD5.computeMD5(data);	
+				for(int i = 0; i < chunkcheck.length; i++){
+					if(chunkcheck[i] != compare[i]){
+		    				System.out.println("Failed");
+		    				sendText("Transmission = Failed");
+		    				return null;
+		    		}
+		    	}
+
+				baos.write(data);
+				bytes = buf.read(data, 0, data.length);
+			}
+			byte[] f = baos.toByteArray();
 			
-			return fileByte;
+			FilePacket fp = new FilePacket(f, fileSum);
+			
+			buf.close();
+			return fp;
 			
 		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
 		return null;
-	}
-	
-	//use this method to received encrypted/ascii armored bytes, then pass them up to be decrypted
-	public FilePacket receiveData(){
-		//entire file checksum
-		byte[] fileSum = new byte[16];
-		
-		byte[] rawData = new byte[1016];
-		byte[] data = new byte[1000];
-		byte[] checksum = new byte[16];
-
-	    try{
-	      //input stream for reading in from the network
-	      InputStream in = socket.getInputStream();
-	      
-	      //output stream for writing to the end result
-	      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-	      
-	      //read the entire checksum of the file and save it for later.
-	      in.read(fileSum, 0, fileSum.length);
-	      
-	      //read one packet from the network
-	      int bytesRead = in.read(rawData, 0, rawData.length);
-	      while(bytesRead != -1){	    	  
-//	    		  rawData = XOREncoding.decodeByte(rawData, "key.txt");
-	    		  
-	    		  ByteArrayInputStream bis = new ByteArrayInputStream(rawData);
-		    	  
-	    		  
-	    		  bis.read(data, 0, data.length);
-//	    		  bis.read(checksum, 0, 16);
-
-	    		  //compute the md5 of the data portion of the packet to verify integrity
-		    	  byte[] compare = saltMD5.computeMD5(data);	
-		    	  
-		    	  //compare data checksum with packet checksum
-//		    	  for(int i = 0; i < checksum.length; i++){
-//		    		  if(checksum[i] != compare[i]){
-//		    			  System.out.println("Failed");
-//		    			  pw.println("Transmission = Failed");
-//		    			  return null;
-//		    		  }
-//		    	  }
-		    	  
-		    	  bis.close();
-		    	  baos.write(data);
-		    	  baos.flush();
-		    	  bytesRead = in.read(rawData, 0, rawData.length);
-	      }
-	      
-	      byte[] fileData = baos.toByteArray();
-	      
-	      for(int i = 0; i < fileData.length; i++){
-	    	  if(fileData[i] == '\u0000'){
-	    		  fileData = Arrays.copyOf(fileData, i);
-	    		  break;
-	    	  }
-	      }
-//	      fileData = Arrays.copyOf(fileData, 2607);
-	      
-	      baos.close();
-	      
-	      FilePacket receievedData = new FilePacket(fileData, fileSum);
-	      System.out.println("Received file");
-	      return receievedData; 
-	    }
-	    //cannot find host
-	    catch(UnknownHostException unhe){
-	      System.out.println("UnknownHostException: " + unhe.getMessage());
-	    }
-	    //connection interrupted/timeout
-	    catch(InterruptedIOException intioe){
-	      System.out.println("Timeout while attempting to establish socket connection.");
-	    }
-	    //input/output error
-	    catch(IOException ioe){
-	      System.out.println("IOException: " + ioe.getMessage());
-	    }
-	    finally{
-	      try{
-	        socket.close();
-	      }catch(IOException ioe){
-	        System.out.println("IOException: " + ioe.getMessage());
-	      }
-	    }
-	    
-	    return null;
 	}
 	
 	public void sendText(String toSend){

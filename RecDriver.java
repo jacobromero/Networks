@@ -1,12 +1,6 @@
 import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Arrays;
 
 public class RecDriver {
 
@@ -19,21 +13,20 @@ public class RecDriver {
 //		t.start();
 //		r.stopReadingText();
 		
-		r.updateRec();
+		FilePacket fp = r.receiveData();
 		
-//		FilePacket f = r.receiveData();
-//		
-//		FileOutputStream fos = new FileOutputStream("test2.txt");
-//		BufferedOutputStream bos = new BufferedOutputStream(fos);
-//		
-//		bos.write(f.fileArray);
-//		bos.flush();
-//		
-//		bos.close();
-//		System.out.println(Arrays.toString(f.fileArray));
-//		
-//		System.out.println(Arrays.toString(f.fileChecksum));
-//		System.out.println(Arrays.toString(saltMD5.computeMD5(f.fileArray)));
+		if(fp == null){
+			System.out.println("fp is null");
+			System.exit(1);
+		}
+		
+		FileOutputStream fos = new FileOutputStream("test2.txt");
+		BufferedOutputStream bos = new BufferedOutputStream(fos);
+		
+		bos.write(fp.fileArray);
+		bos.flush();
+		bos.close();
+		fos.close();
 		
 		r.shutDown();
 	}
