@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.*;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -86,6 +87,14 @@ public class Receiver implements Runnable{
 				bytes = buf.read(data, 0, data.length);
 			}
 			byte[] f = baos.toByteArray();
+			
+			//trim the file array, to remove any extra null bytes if the packet was larger than the file size.
+			for(int i = f.length - 1; i >= 0; i--){
+				if(f[i] != '\u0000'){
+					f = Arrays.copyOf(f, i);
+					break;
+				}
+			}
 			
 			FilePacket fp = new FilePacket(f, fileSum);
 			

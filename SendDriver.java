@@ -15,7 +15,7 @@ public class SendDriver {
 //		s.sendText("hey bud");
 		
 //		s.stopReadingText();
-    	Path path = Paths.get("test1.txt");
+    	Path path = Paths.get("abc.zip");
     	byte[] data = Files.readAllBytes(path);
     	
 		
