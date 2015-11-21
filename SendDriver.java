@@ -13,6 +13,7 @@ public class SendDriver {
 //		t.start();
 		
 //		s.sendText("hey bud");
+
 		
 //		s.stopReadingText();
     	Path path = Paths.get("abc.zip");
@@ -25,6 +26,7 @@ public class SendDriver {
 
 //		System.out.println(Arrays.toString(f.fileChecksum));
 		s.sendData(f);
+
     	s.shutDown();
 	}
 }

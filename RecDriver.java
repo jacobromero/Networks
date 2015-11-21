@@ -23,7 +23,7 @@ public class RecDriver {
 		FileOutputStream fos = new FileOutputStream("abc2.zip");
 		BufferedOutputStream bos = new BufferedOutputStream(fos);
 		
-		bos.write(fp.fileArray);
+	 	bos.write(fp.fileArray);
 		bos.flush();
 		bos.close();
 		fos.close();
