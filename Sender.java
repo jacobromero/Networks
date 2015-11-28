@@ -34,7 +34,7 @@ public class Sender implements Runnable{
     }
     
     
-	public void searchForClients(){
+	public boolean searchForClients(){
 		//need to change so the user can change port number
 		while(port == -1){
 			System.out.println("Please set a port to listen on.");
@@ -45,12 +45,13 @@ public class Sender implements Runnable{
 			try {
 				socket = new Socket(url, port);
 				socket.setSoTimeout(0);
-				
-				System.out.println("Connected.");
+
 				
 				//open printwriter for writing to socket
 				pw = new PrintWriter(socket.getOutputStream(), true);
+				System.out.println("Connected.");
 				flag = false;
+				return flag;
 			} catch (ConnectException e) {
 				//continue to search for server with specified ip and port open
 				System.out.println("Continuing to listen...");
@@ -59,6 +60,7 @@ public class Sender implements Runnable{
 				System.out.println("Something unexpected happened... \n" + e.getMessage());
 			}
 		}
+		return false;
 	}
   
   public void closeConnection(){
@@ -74,19 +76,20 @@ public class Sender implements Runnable{
   //used this method to sendData encrypted bytes to receiver.
   public void sendData(FilePacket sendData) {
 	  try{
+//		  clearBuffer();
+		  
 		  //create byte array the length of the file we are sending
 		  //can specify the length of the array to sendData in chunks, here 1000 bytes = 1kb chunks
 		  byte[] data = new byte[1000];
 		  			  
 		  ByteArrayInputStream bis = new ByteArrayInputStream(sendData.fileArray);
-		  ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		  
 		  
 		  OutputStream os = socket.getOutputStream();
-		  
 		  //write the overall file checksum into the stream, to be read by the receiver. (this may or may not be corrupted on sender side
-//		  os.write(sendData.fileChecksum, 0, sendData.fileChecksum.length);
+		  os.write(sendData.fileChecksum, 0, sendData.fileChecksum.length);
 		  
-		  byte[] chunkChecksum;
+		  byte[] chunkChecksum = new byte[16];
 		  int bytes = bis.read(data, 0, data.length);
 		  while(bytes != -1){
 			  //chunkChecksum sum the 1kb chunk 'data'
@@ -100,28 +103,21 @@ public class Sender implements Runnable{
 				  failIntentionally = false;
 			  }
 			  
-			  //write both data and data checksum into a single array(chunk)
-			  baos.write(data);
-			  baos.write(chunkChecksum);
-			  byte[] toSend = baos.toByteArray();
 			  
-			  
-			  //Encrypt the chunk(data and hash)
-			  toSend = XOREncoding.encode(toSend, "key.txt");
-			  
-			  //write the chunk to the output stream
-			  os.write(toSend);
+			  //write the chunk to the output stream, encrypted
+//			  os.write(data);
+//			  os.write(chunkChecksum);
+			  os.write(XOREncoding.encode(data, "key.txt"));
+			  os.write(XOREncoding.encode(chunkChecksum, "key.txt"));
 			  
 			  //clear data on the byte output stream
-			  baos.flush();
 			  os.flush();
 
 			  bytes = bis.read(data, 0, data.length);
 		  }
 		  
-		  os.close();
+//		  os.close();
 		  bis.close();
-		  baos.close();
 		  return;
 	    }
 	  	//cannot find host
@@ -146,7 +142,7 @@ public class Sender implements Runnable{
   	}
   
   	public void sendText(String toSend){
-		pw.println(toSend);	
+		pw.println(toSend);
   	}
   	
 	public void setServerUrl(String url){
@@ -159,21 +155,45 @@ public class Sender implements Runnable{
 
 	//async socket reader
 	public void run(){
+		read = true;
 		try{
 			BufferedReader readText = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			
 			String clientText = "";
-
+			
 			while(read){
+				while(readText.ready()){
+					clientText = readText.readLine();					
+					//change this preform an action if a certian string is read
+					//ie if it reads "Encryption = True" set some boolean Encryption to true
+					if(clientText != null){
+						messages.add(clientText);
+					}
+					else
+						return;
+				}
+			}
+		}
+		catch(IOException ioe){
+			ioe.getMessage();
+		}
+	}
+	
+	public void readText(){
+		read = true;
+		try{
+			BufferedReader readText = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			
+			String clientText = "";
+			while(!clientText.trim().equals("Finshed = True")){
 				clientText = readText.readLine();
 				
 				//change this preform an action if a certian string is read
 				//ie if it reads "Encryption = True" set some boolean Encryption to true
-				if(clientText != null)
+				if(clientText != null && !clientText.equals("Finshed = True")){
 					messages.add(clientText);
-				else
-					return;
-			}			
+				}
+			}
 		}
 		catch(IOException ioe){
 			ioe.getMessage();
@@ -188,13 +208,23 @@ public class Sender implements Runnable{
 		read = true;
 	}
 	
-	public void shutDown(){		
+	public boolean shutDown(){		
 		try {
-			System.out.println("\nDisconnecting...");
 			socket.close();
-			System.out.println("Done.");
+			return true;
 		} catch (IOException e) {
 			e.printStackTrace();
+			return false;
+		}
+	}
+
+	public void clearBuffer() {
+		if(socket == null){
+			searchForClients();
+		}
+		else{
+			shutDown();
+			searchForClients();
 		}
 	}
 } 
