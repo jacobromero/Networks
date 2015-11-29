@@ -49,7 +49,7 @@ public class saltMD5 {
 		int c = INIT_C;
 		int d = INIT_D;
 		int[] buffer = new int[16];
-		
+
 		for (int i = 0; i < numBlocks; i++) {
 			int index = i << 6;
 			for (int j = 0; j < 64; j++, index++)

@@ -1,13 +1,22 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.Random;
 
 public class FileReceive {
 	
 	static JFrame jfrm;
 	static JLabel text;
+	static String KeyPath;
 	static Receiver r;
 	
 	/* Method Name: *default constructor*
@@ -50,50 +59,66 @@ public class FileReceive {
 	public static boolean authenticate() throws InterruptedException {
 		String username = "";
 		String password = "";
-		
-		
-		//don't need since already listened in main method, and found server then
-//		Receiver r = new Receiver();
-//		r.listen();
-		
-		
-		Thread t = new Thread(r);
-		t.start();
+		System.out.println( "Receiver is in the authenticate function" );
+		r = new Receiver();
+		r.listen();
 		boolean authenticated = false;
-		boolean keepchecking = true;
 		while (!authenticated) {
-			while (keepchecking) { 
-				Thread.sleep(50);
-				if ( ! r.messages.isEmpty() ) {
-					username = r.messages.remove();
-					keepchecking = false;
-				}
-			}
-			
-			while (keepchecking) { 
-				Thread.sleep(50);
-				if ( ! r.messages.isEmpty() ) {
-					password = r.messages.remove();
-					keepchecking = false;
-				}
-			}
-			keepchecking = true;
+			r.readText();
+			username = r.messages.remove();
+			password = r.messages.remove();
 			System.out.println( username + " " + password );
-			// TODO: Authenticate with the salted hash
-			authenticated = username.equals( "George" );
+			ArrayList<String> ALusernames = new ArrayList<String>();
+			ArrayList<String> ALhashes = new ArrayList<String>();
+			String[] usernames;
+			String[] hashes;
+			try{
+				String text = "";
+	            BufferedReader in = new BufferedReader(new FileReader(new File("users.txt")));
+	            text = in.readLine();
+				while ( text != null ) {
+					ALusernames.add( text );
+					ALhashes.add(in.readLine());
+					text = in.readLine();
+				}
+				in.close();
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+			usernames = ALusernames.toArray( new String[ ALusernames.size() ] );
+			hashes = ALhashes.toArray( new String[ ALhashes.size() ] );
+			authenticated = check( username, password, usernames, hashes );
+			System.out.println( "Authenticated: " + authenticated );
 			if ( authenticated ) {
 				r.sendText( "Pass" );
+				r.sendText( "Finished = True" );
 			} else {
 				r.sendText( "rekt faggot" );
+				r.sendText( "Finished = True" );
 			}
 		}
-		t.interrupt();
-		r.stopReadingText();
-		
-		//don't shutdown connection here
-//		r.shutDown();
-		
 		return true;
+	}
+	
+	/* Method Name: check
+	 * Creator: George Zhang
+	 * Description:
+	 * This takes in the user/pass combo and checks to see if it matches any of the existing users.
+	 */
+	
+	public static boolean check( String username, String password, String[] usernames, String[] hashes ) {
+		for ( int x = 0; x < usernames.length; x++ ) {
+			if ( username.equals( usernames[x] ) ) {
+				String salt = CreateUser.parseSalt(hashes[x]);
+				String hash = Base64Coding.decode(CreateUser.parseHash(hashes[x]));
+				password = salt + password;
+				String calculatedHash = saltMD5.toHexString(saltMD5.computeMD5(password.getBytes()));
+				if ( hash.equals( calculatedHash ) ) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 	
 	/* Method Name: init
@@ -119,43 +144,68 @@ public class FileReceive {
 			public void run() {
 				try {
 					new FileReceive();
-					r = new Receiver();
-					r.listen();
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
 			}
 		});
-		
 		networkPortion();
 	}
 	
 	public static void networkPortion() throws InterruptedException {
 		boolean authenticated = false;
-		text.setText( "1" );
 		while ( ! authenticated ) {
 			authenticated = authenticate();
 		}
-		text.setText( "2" );
-		Receiver r = new Receiver();
-		Thread t = new Thread(r);
-		t.start();
-		r.listen();
-		boolean keepchecking = true;
-		JOptionPane.showMessageDialog( jfrm, "ABOOT TO ENTER THE LOOP" );
-		while (keepchecking) { 
-			Thread.sleep(50);
-			if ( ! r.messages.isEmpty() ) {
-				JOptionPane.showMessageDialog( jfrm, r.messages.remove());
-				keepchecking = false;
+		r.readText();
+		boolean armoured;
+		if ( ! r.messages.isEmpty() ) {
+			r.fileLength = Integer.parseInt(r.messages.remove());
+			if ( r.messages.remove().equals( "Armoured" ) ) {
+				armoured = true;
+			} else {
+				armoured = false;
 			}
 		}
-		FilePacket packet = r.receiveData();
-		text.setText( "3" );
-		r.stopReadingText();
-		r.shutDown();
-		
-		//user .interrupt method, same as shutdown, but not deprecated
-		t.interrupt();
+		boolean keySelected = false;
+		while ( ! keySelected ) {
+			JOptionPane.showMessageDialog( jfrm, "What is the key for the data?" );
+			JFileChooser jfc = new JFileChooser();
+			int result = jfc.showOpenDialog( null );
+			if ( result == JFileChooser.APPROVE_OPTION ) {
+				KeyPath = jfc.getSelectedFile().getPath();
+				System.out.println( "DEBUG: Key Path is " + KeyPath );
+				r.sendText( "Send the file over" );
+				r.sendText( "Finished = True" );
+				FilePacket packet = r.receiveData( KeyPath );
+				if ( packet == null ) {
+					System.out.println( "The file length is supposedly " + r.fileLength );
+					System.out.println( "We got nothing" );
+					System.exit(1);
+				}
+				r.stopReadingText();
+				r.shutDown();
+				keySelected = true;
+				
+				FileOutputStream fos;
+				try {
+					fos = new FileOutputStream("test.txt");
+					BufferedOutputStream bos = new BufferedOutputStream(fos);
+				 	bos.write(packet.fileArray);
+					bos.flush();
+					bos.close();
+					fos.close();
+				} catch (FileNotFoundException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} //insert output file name here
+					catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+			}
+		}
+		System.out.println( "You reached the end lmao");
 	}
 }

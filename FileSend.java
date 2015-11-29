@@ -22,11 +22,9 @@ public class FileSend {
 	String FilePath;
 	String KeyPath;
 	byte[] EntireFile;
-	byte[][] ArmoredFileChunks;
-	byte[][] ArmoredFileChecksums;
+	byte[] ArmoredFile;
 	boolean isArmored = false;
 	Sender s;
-	Thread t;
 	
 	/* Method Name: *default constructor*
 	 * Creator: George Zhang
@@ -39,14 +37,6 @@ public class FileSend {
 	public FileSend() {
 		s = new Sender(); // configure port later
     	s.searchForClients();
-    	t = new Thread(s);
-    	t.start();
-    	
-    	//user .interrupt method, same as shutdown, but not deprecated
-    	t.interrupt();
-//    	t.suspend();
-    	
-    	
 		loginDialog();
 		jfrm = new JFrame( "Send a File" );
 		jfrm.setSize( 300,  300 );
@@ -78,27 +68,37 @@ public class FileSend {
 		});
 		AsciiArmour.addActionListener( new ActionListener() {
 			public void actionPerformed( ActionEvent ae ) {
-				// TODO: This is currently broken right now. Ask Andrew.
 				isArmored = true;
-				//ArmoredFileChunks = new byte[FileChunks.length][];
-				//ArmoredFileChecksums = new byte[FileChunks.length][];
+				ArmoredFile = Base64Coding.encode( new String( EntireFile ) ).getBytes();
 				JOptionPane.showMessageDialog( jfrm, "Ascii Armoured" );
-				//System.out.println( "DEBUG: Line 1 of Armor is " + new String( ArmoredFileChunks[0] ) );
+				System.out.println( "DEBUG: Line 1 of Armor is " + new String( ArmoredFile ) );
 				AsciiArmour.setEnabled( false );
 			}
 		});
 		Send.addActionListener( new ActionListener() {
 			public void actionPerformed( ActionEvent ae ) {
 				FilePacket packet = new FilePacket( EntireFile, saltMD5.computeMD5(EntireFile) );
+				s.sendText( "" + packet.fileArray.length );
 				if ( isArmored ) {
-					
+					s.sendText( "Armoured" );
 				} else {
-					
+					s.sendText( "Unarmoured" );
 				}
-				s.sendData( packet );
-				s.sendText( "Data Sent" );
-				System.out.println( "Done sending" );
-				AsciiArmour.setEnabled( false );
+				s.sendText( "Finished = True" );
+				
+				JOptionPane.showMessageDialog( jfrm, "You must choose a key." );
+				JFileChooser jfc = new JFileChooser();
+				int result = jfc.showOpenDialog( null );
+				if ( result == JFileChooser.APPROVE_OPTION ) {
+					KeyPath = jfc.getSelectedFile().getPath();
+					System.out.println( "DEBUG: Key Path is " + FilePath );
+					s.readText();
+					if ( s.messages.remove().equals( "Send the file over" ) ) {
+						s.sendData( packet, KeyPath );
+						System.out.println( "Done sending" );
+						AsciiArmour.setEnabled( false );
+					}
+				}
 			}
 		});
 		jfrm.add( SelectFile );
@@ -224,33 +224,26 @@ public class FileSend {
 	 * Creator: George Zhang
 	 * Description:
 	 * The JPasswordField object actually returns its content as a char[] so I had to convert that to a String first.
-	 * Then I just look for a match in the parallel username/password arrays.
-	 * It's pretty simple, actually.
 	 */
 	
-	@SuppressWarnings("deprecation")
 	public boolean authenticate( String username, char[] cpassword ) throws InterruptedException {
 		String password = "";
 		String reply = "";
 		for ( int x = 0; x < cpassword.length; x++ ) {
 			password = password + cpassword[x];
 		}
-		t.resume();
 		s.sendText( username );
 		s.sendText( password );
-		s.restartReadingText();
-		boolean keepchecking = true;
-		while (keepchecking){ 
-			Thread.sleep(50);
-			if ( ! s.messages.isEmpty() ) {
-				reply = s.messages.remove();
-				keepchecking = false;
-			}
+		s.sendText( "Finished = True" );
+		s.readText();
+		if ( s.messages.isEmpty() ) {
+			System.out.println( "Um, there was no reply..." );
+			System.exit(1);
+		} else {
+			reply = s.messages.remove();
 		}
-		s.stopReadingText();
-		t.suspend();
+		System.out.println( "Reply is " + reply );
 		if ( reply.equals( "Pass" ) ) {
-	    	s.shutDown(); // TODO Remove this later.
 			return true;
 		}
 		return false;
@@ -325,33 +318,6 @@ public class FileSend {
 			}
 		}
 		return chunks;
-	}
-	
-	/* Method Name: getValueOfIPField LEGACY
-	 * Creator: George Zhang
-	 * Description:
-	 * This just parses the value of the IP and the port from the IPField.
-	 * Legacy because Jacob wants the thing as a String.
-	 */
-	
-	public long getValueOfIPField( JFormattedTextField IPField, String query ) {
-		String text = (String) IPField.getValue();
-		if ( query.equals( "address" ) ) {
-			int place = 0;
-			long result = 0;
-			for ( int x = 14; x >= 0; x-- ) {
-				if ( (x + 1) % 4 != 0 ) {
-					result += (long) ((text.charAt(x) - '0') * Math.pow(10, place));
-					place++;
-				}
-			}
-			return result;
-		} else if ( query.equals( "port" ) ) {
-			int result = 1000 * (text.charAt(16) - '0') + 100 * (text.charAt(17) - '0') + 10 * (text.charAt(18) - '0') + (text.charAt(19) - '0');
-			return result;
-		}
-		System.out.println( "You fucked up the parameters George" );
-		return -1;
 	}
 	
 }
