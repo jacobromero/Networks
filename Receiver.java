@@ -9,7 +9,7 @@ public class Receiver implements Runnable{
 	private ServerSocket server = null;
 	private Socket socket = null;
 	private PrintWriter pw = null;
-	protected int fileLength;
+	protected long fileLength;
 	
 	public Queue<String> messages = new LinkedList<String>();
 	public boolean read = true;
@@ -57,72 +57,75 @@ public class Receiver implements Runnable{
 	}
 	
 	//use this method to received encrypted/ascii armored bytes, then pass them up to be decrypted
-	public FilePacket receiveData( String keyname ) {
+	public FilePacket receiveData( String keyname, boolean asciiArmored ) {
+		//TODO set up ascii armor
 		try {
 //			clearBuffer();
-			byte[] data = new byte[10000];
+			long chunks = fileLength / 1024;
+			int lastChunk = (int) (fileLength - (chunks *1024));
+			
+			byte[] data = new byte[1024];
 			byte[] chunkcheck = new byte[16];
 			byte[] fileSum = new byte[16];
 			
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 			BufferedInputStream buf = new BufferedInputStream(socket.getInputStream());
 			
-			//read in entire file checksum
-			buf.read(fileSum, 0, fileSum.length);
-
-			//read in data portion of the packet
-			int bytes = buf.read(data);
-			int count = 0;
-			while(bytes != -1){
-				System.out.println("Receive chunk - " + count++);
-				//read in checksum of the packet
-				buf.read(chunkcheck);
-				
-				//decrypt both files
-				data = XOREncoding.decodeByte(data, keyname);
-				chunkcheck = XOREncoding.decodeByte(chunkcheck, keyname);
-				
-				
-				boolean passed = false;
-				while(!passed){
-					//compare data checksum with packet checksum
-					byte[] compare = saltMD5.computeMD5(data);	
-					for(int i = 0; i < chunkcheck.length; i++){
-						if(chunkcheck[i] != compare[i]){
-							System.out.println("Chunk failed.");
-							sendText("Failed");
-							sendText("Finished = True");
-							
-							passed = false;
-							break;
-						}
-						else{
-							sendText("Passed");
-							sendText("Finished = True");
-							passed = true;
-						}
-					}
-					
-					if(!passed){
-						bytes = buf.read(data, 0, data.length);
-						System.out.println( "Failed ");
-					}
-					else{
-						System.out.println( "Passed" );
-						baos.write(data);
-						bytes = buf.read(data, 0, data.length);
-					}
-				}
+//			buf.read(fileSum);
+			
+			for(int i = 0; i < chunks; i++){
+				buf.read(data);
+//				buf.read(chunkcheck);
+//				baos.write(data);
 			}
+			
+			buf.read(data, 0, lastChunk);
+			baos.write(data, 0, lastChunk);
+			
 			byte[] f = baos.toByteArray();
 			
-			//trim the file array, to remove any extra null bytes if the packet was larger than the file size.
-			f = Arrays.copyOf(f, fileLength);
-			
+			//trim the file array, to remove any extra null bytes if the packet was larger than the file size.			
 			FilePacket fp = new FilePacket(f, fileSum);
 			baos.close();
 			buf.close();
 			return fp;
+			
+//			//read in entire file checksum
+//			buf.read(fileSum, 0, fileSum.length);
+//
+//			//read in data portion of the packet
+//			int bytes = buf.read(data, 0, data.length);
+//			int count = 0;
+//			while(bytes != -1){
+//				System.out.println("Receive chunk - " + count++);
+//				//read in checksum of the packet
+//				buf.read(chunkcheck, 0, chunkcheck.length);
+//				
+//				//decrypt both files
+//				data = XOREncoding.decodeByte(data, keyname);
+//				chunkcheck = XOREncoding.decodeByte(chunkcheck, keyname);
+//				
+//				//compare data checksum with packet checksum
+//				byte[] compare = saltMD5.computeMD5(data);	
+//				for(int i = 0; i < chunkcheck.length; i++){
+//					if(chunkcheck[i] != compare[i]){
+//						System.out.println("Failed");
+////						return null;
+//					}
+//				}
+//				
+//				baos.write(data);
+//				bytes = buf.read(data, 0, data.length);
+//			}
+//			byte[] f = baos.toByteArray();
+//			
+//			//trim the file array, to remove any extra null bytes if the packet was larger than the file size.
+//			f = Arrays.copyOf(f, fileLength);
+//			
+//			FilePacket fp = new FilePacket(f, fileSum);
+//			baos.close();
+//			buf.close();
+//			return fp;
 			
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();

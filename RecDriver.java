@@ -10,7 +10,7 @@ public class RecDriver {
 
 	//Also note that I now require file length set in the reciever class this is to help me trim the file, since it was giving incorrect checksums without the length. 
 	public static void main(String[] args) throws InterruptedException, IOException {
-		String filePath = "test2.txt";
+		String filePath = "abc2.avi";
 		
 		Receiver r = new Receiver();
 		r.listen();

@@ -11,7 +11,7 @@ public class SendDriver {
 
 	//Also note that I now require file length set in the reciever class this is to help me trim the file, since it was giving incorrect checksums without the length.
 	public static void main(String[] args) throws IOException, InterruptedException {
-		String filePath = "test.txt";
+		String filePath = "abc.avi";
 		
 		//search network for host
 		Sender s = new Sender();
@@ -28,7 +28,7 @@ public class SendDriver {
 		//send file length (important), insert file name here
 		Path path = Paths.get(filePath);
     	byte[] data = Files.readAllBytes(path);
-
+    	s.fileLength = data.length;
     	s.sendText(Integer.toString(data.length));
     	System.out.println(Integer.toString(data.length));
     	s.sendText("Finished = True");
