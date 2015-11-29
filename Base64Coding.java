@@ -6,7 +6,6 @@ public class Base64Coding {
 		// the result/encoded string, the padding string, and the pad count
 		String r = "", p = "";
 		int c = s.length() % 3;
-	
 		// add a right zero pad to make this string a multiple of 3 characters
 		if (c > 0) {
 		    for (; c < 3; c++) {

@@ -177,13 +177,13 @@ public class FileReceive {
 				System.out.println( "DEBUG: Key Path is " + KeyPath );
 				r.sendText( "Send the file over" );
 				r.sendText( "Finished = True" );
+				//TODO implement ascii armoring
 				FilePacket packet = r.receiveData( KeyPath, false );
 				if ( packet == null ) {
 					System.out.println( "The file length is supposedly " + r.fileLength );
 					System.out.println( "We got nothing" );
 					System.exit(1);
 				}
-				r.stopReadingText();
 				r.shutDown();
 				keySelected = true;
 				
@@ -196,11 +196,9 @@ public class FileReceive {
 					bos.close();
 					fos.close();
 				} catch (FileNotFoundException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				} //insert output file name here
 					catch (IOException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 				

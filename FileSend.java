@@ -36,6 +36,7 @@ public class FileSend {
 	
 	public FileSend() {
 		s = new Sender(); // configure port later
+		s.url = "192.168.1.11";
     	s.searchForClients();
 		loginDialog();
 		jfrm = new JFrame( "Send a File" );
@@ -94,6 +95,7 @@ public class FileSend {
 					System.out.println( "DEBUG: Key Path is " + FilePath );
 					s.readText();
 					if ( s.messages.remove().equals( "Send the file over" ) ) {
+						//TODO implement ascii armoring
 						s.sendData( packet, KeyPath, false );
 						System.out.println( "Done sending" );
 						AsciiArmour.setEnabled( false );

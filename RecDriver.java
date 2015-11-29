@@ -40,7 +40,7 @@ public class RecDriver {
 		System.out.println("File size of byte array = " + r.fileLength);
 		
 		//tell sender to send file
-		r.sendText("Send File = True");
+
 				
 		//receive file
 		FilePacket fp = r.receiveData("key.txt", false);

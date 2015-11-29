@@ -15,6 +15,7 @@ public class SendDriver {
 		
 		//search network for host
 		Sender s = new Sender();
+//		s.url = "192.168.1.11";
     	s.searchForClients();  	
     	
     	//read in user name and/or settings
@@ -28,7 +29,7 @@ public class SendDriver {
 		//send file length (important), insert file name here
 		Path path = Paths.get(filePath);
     	byte[] data = Files.readAllBytes(path);
-    	s.fileLength = data.length;
+
     	s.sendText(Integer.toString(data.length));
     	System.out.println(Integer.toString(data.length));
     	s.sendText("Finished = True");
