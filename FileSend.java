@@ -25,7 +25,6 @@ public class FileSend {
 	byte[] ArmoredFile;
 	boolean isArmored = false;
 	Sender s;
-	Thread t;
 	
 	/* Method Name: *default constructor*
 	 * Creator: George Zhang
@@ -37,10 +36,9 @@ public class FileSend {
 	
 	public FileSend() {
 		s = new Sender(); // configure port later
+		s.port = 520;
+		s.url = "169.254.14.97";
     	s.searchForClients();
-    	t = new Thread(s);
-    	t.start();
-    	t.suspend();
 		loginDialog();
 		jfrm = new JFrame( "Send a File" );
 		jfrm.setSize( 300,  300 );
@@ -82,15 +80,27 @@ public class FileSend {
 		Send.addActionListener( new ActionListener() {
 			public void actionPerformed( ActionEvent ae ) {
 				FilePacket packet = new FilePacket( EntireFile, saltMD5.computeMD5(EntireFile) );
+				s.sendText( "" + packet.fileArray.length );
 				if ( isArmored ) {
-					
+					s.sendText( "Armoured" );
 				} else {
-					
+					s.sendText( "Unarmoured" );
 				}
-				s.sendData( packet );
-				s.sendText( "Data Sent" );
-				System.out.println( "Done sending" );
-				AsciiArmour.setEnabled( false );
+				s.sendText( "Finished = True" );
+				
+				JOptionPane.showMessageDialog( jfrm, "You must choose a key." );
+				JFileChooser jfc = new JFileChooser();
+				int result = jfc.showOpenDialog( null );
+				if ( result == JFileChooser.APPROVE_OPTION ) {
+					KeyPath = jfc.getSelectedFile().getPath();
+					System.out.println( "DEBUG: Key Path is " + KeyPath );
+					s.readText();
+					if ( s.messages.remove().equals( "Send the file over" ) ) {
+						s.sendData( packet, KeyPath );
+						System.out.println( "Done sending" );
+						AsciiArmour.setEnabled( false );
+					}
+				}
 			}
 		});
 		jfrm.add( SelectFile );
@@ -218,29 +228,24 @@ public class FileSend {
 	 * The JPasswordField object actually returns its content as a char[] so I had to convert that to a String first.
 	 */
 	
-	@SuppressWarnings("deprecation")
 	public boolean authenticate( String username, char[] cpassword ) throws InterruptedException {
 		String password = "";
 		String reply = "";
 		for ( int x = 0; x < cpassword.length; x++ ) {
 			password = password + cpassword[x];
 		}
-		t.resume();
 		s.sendText( username );
 		s.sendText( password );
-		s.restartReadingText();
-		boolean keepchecking = true;
-		while (keepchecking){ 
-			Thread.sleep(50);
-			if ( ! s.messages.isEmpty() ) {
-				reply = s.messages.remove();
-				keepchecking = false;
-			}
+		s.sendText( "Finished = True" );
+		s.readText();
+		if ( s.messages.isEmpty() ) {
+			System.out.println( "Um, there was no reply..." );
+			System.exit(1);
+		} else {
+			reply = s.messages.remove();
 		}
-		s.stopReadingText();
-		t.suspend();
+		System.out.println( "Reply is " + reply );
 		if ( reply.equals( "Pass" ) ) {
-	    	s.shutDown(); // TODO Remove this later.
 			return true;
 		}
 		return false;

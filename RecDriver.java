@@ -25,7 +25,7 @@ public class RecDriver {
 		//send more options to sender
 		r.sendText("Ascii Armor = True");
 		
-		r.sendText("Finshed = True");
+		r.sendText("Finished = True");
 
 		//after sending options
 		//read for file size.
@@ -34,7 +34,7 @@ public class RecDriver {
 		
 		//get file length, important for trimming and checksumming entire file.
 		while(!r.messages.isEmpty()){
-				r.fileLength = Integer.parseInt(r.messages.remove());
+			r.fileLength = Integer.parseInt(r.messages.remove());
 		}
 		
 		System.out.println("File size of byte array = " + r.fileLength);
@@ -43,7 +43,7 @@ public class RecDriver {
 		r.sendText("Send File = True");
 				
 		//receive file
-		FilePacket fp = r.receiveData();
+		FilePacket fp = r.receiveData("key.txt");
 		
 		//check if receiving file failed, and tell sender
 		if(fp == null){

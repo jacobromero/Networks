@@ -49,10 +49,13 @@ public class CreateUser {
 		try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("users.txt", true)))) {
 			out.println(user);
 			String salt = saltMD5.getNextSalt();
+			salt = Base64Coding.encode( salt );
 			pass = salt + pass;
-			out.println(Base64Coding.encode(salt) + ":" + Base64Coding.encode(saltMD5.toHexString(saltMD5.computeMD5(pass.getBytes()))));
+			out.println(salt + ":" + Base64Coding.encode(saltMD5.toHexString(saltMD5.computeMD5(pass.getBytes()))));
 			out.close();
-		}catch (IOException e) {
+			System.out.println( saltMD5.toHexString(saltMD5.computeMD5(pass.getBytes())) );
+			//48CBCCDD95DDD2BD2DECBB929C6220AA
+		}catch (IOException e) {                        
 			e.printStackTrace();
 		}
 		return true;
@@ -63,6 +66,8 @@ public class CreateUser {
 		for ( int x = 0; x < data.length(); x++ ) {
 			if ( data.charAt(x) != ':' ) {
 				salt = salt + data.charAt(x);
+			} else {
+				x = data.length();
 			}
 		}
 		return salt;

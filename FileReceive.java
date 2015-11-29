@@ -1,9 +1,13 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Random;
@@ -12,6 +16,8 @@ public class FileReceive {
 	
 	static JFrame jfrm;
 	static JLabel text;
+	static String KeyPath;
+	static Receiver r;
 	
 	/* Method Name: *default constructor*
 	 * Creator: George Zhang
@@ -53,33 +59,15 @@ public class FileReceive {
 	public static boolean authenticate() throws InterruptedException {
 		String username = "";
 		String password = "";
-		Receiver r = new Receiver();
+		System.out.println( "Receiver is in the authenticate function" );
+		r = new Receiver();
 		r.listen();
-		Thread t = new Thread(r);
-		t.start();
 		boolean authenticated = false;
-		boolean keepchecking = true;
 		while (!authenticated) {
-			while (keepchecking) { 
-				Thread.sleep(50);
-				if ( ! r.messages.isEmpty() ) {
-					username = r.messages.remove();
-					keepchecking = false;
-				}
-			}
-			keepchecking = true;
-			while (keepchecking) { 
-				Thread.sleep(50);
-				if ( ! r.messages.isEmpty() ) {
-					password = r.messages.remove();
-					keepchecking = false;
-				}
-			}
-			keepchecking = true;
+			r.readText();
+			username = r.messages.remove();
+			password = r.messages.remove();
 			System.out.println( username + " " + password );
-			r.stopReadingText();
-			r.shutDown();
-			t.suspend();
 			ArrayList<String> ALusernames = new ArrayList<String>();
 			ArrayList<String> ALhashes = new ArrayList<String>();
 			String[] usernames;
@@ -91,7 +79,7 @@ public class FileReceive {
 				while ( text != null ) {
 					ALusernames.add( text );
 					ALhashes.add(in.readLine());
-					in.readLine();
+					text = in.readLine();
 				}
 				in.close();
 			}catch(Exception e){
@@ -100,14 +88,15 @@ public class FileReceive {
 			usernames = ALusernames.toArray( new String[ ALusernames.size() ] );
 			hashes = ALhashes.toArray( new String[ ALhashes.size() ] );
 			authenticated = check( username, password, usernames, hashes );
+			System.out.println( "Authenticated: " + authenticated );
 			if ( authenticated ) {
 				r.sendText( "Pass" );
+				r.sendText( "Finished = True" );
 			} else {
 				r.sendText( "rekt faggot" );
+				r.sendText( "Finished = True" );
 			}
 		}
-		r.stopReadingText();
-		r.shutDown();
 		return true;
 	}
 	
@@ -120,9 +109,10 @@ public class FileReceive {
 	public static boolean check( String username, String password, String[] usernames, String[] hashes ) {
 		for ( int x = 0; x < usernames.length; x++ ) {
 			if ( username.equals( usernames[x] ) ) {
-				String salt = Base64Coding.decode(CreateUser.parseSalt(hashes[x]));
+				String salt = CreateUser.parseSalt(hashes[x]);
 				String hash = Base64Coding.decode(CreateUser.parseHash(hashes[x]));
-				String calculatedHash = saltMD5.toHexString(saltMD5.computeMD5((salt + password).getBytes()));
+				password = salt + password;
+				String calculatedHash = saltMD5.toHexString(saltMD5.computeMD5(password.getBytes()));
 				if ( hash.equals( calculatedHash ) ) {
 					return true;
 				}
@@ -164,31 +154,58 @@ public class FileReceive {
 	
 	public static void networkPortion() throws InterruptedException {
 		boolean authenticated = false;
-		text.setText( "1" );
 		while ( ! authenticated ) {
 			authenticated = authenticate();
 		}
-		text.setText( "2" );
-		Receiver r = new Receiver();
-		text.setText("3");
-		Thread t = new Thread(r);
-		text.setText("4");
-		t.start();
-		text.setText("5");
-		r.listen();
-		text.setText("6");
-		boolean keepchecking = true;
-		JOptionPane.showMessageDialog( jfrm, "ABOOT TO ENTER THE LOOP" );
-		while (keepchecking) { 
-			if ( ! r.messages.isEmpty() ) {
-				JOptionPane.showMessageDialog( jfrm, r.messages.remove());
-				keepchecking = false;
+		r.readText();
+		boolean armoured;
+		if ( ! r.messages.isEmpty() ) {
+			r.fileLength = Integer.parseInt(r.messages.remove());
+			if ( r.messages.remove().equals( "Armoured" ) ) {
+				armoured = true;
+			} else {
+				armoured = false;
 			}
 		}
-		FilePacket packet = r.receiveData();
-		text.setText( "3" );
-		r.stopReadingText();
-		r.shutDown();
-		t.stop();
+		boolean keySelected = false;
+		while ( ! keySelected ) {
+			JOptionPane.showMessageDialog( jfrm, "What is the key for the data?" );
+			JFileChooser jfc = new JFileChooser();
+			int result = jfc.showOpenDialog( null );
+			if ( result == JFileChooser.APPROVE_OPTION ) {
+				KeyPath = jfc.getSelectedFile().getPath();
+				System.out.println( "DEBUG: Key Path is " + KeyPath );
+				r.sendText( "Send the file over" );
+				r.sendText( "Finished = True" );
+				FilePacket packet = r.receiveData( KeyPath );
+				if ( packet == null ) {
+					System.out.println( "The file length is supposedly " + r.fileLength );
+					System.out.println( "We got nothing" );
+					System.exit(1);
+				}
+				r.stopReadingText();
+				r.shutDown();
+				keySelected = true;
+				
+				FileOutputStream fos;
+				try {
+					fos = new FileOutputStream("test.txt");
+					BufferedOutputStream bos = new BufferedOutputStream(fos);
+				 	bos.write(packet.fileArray);
+					bos.flush();
+					bos.close();
+					fos.close();
+				} catch (FileNotFoundException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} //insert output file name here
+					catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+			}
+		}
+		System.out.println( "You reached the end lmao");
 	}
 }

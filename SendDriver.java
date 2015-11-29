@@ -30,7 +30,8 @@ public class SendDriver {
     	byte[] data = Files.readAllBytes(path);
 
     	s.sendText(Integer.toString(data.length));
-    	s.sendText("Finshed = True");
+    	System.out.println(Integer.toString(data.length));
+    	s.sendText("Finished = True");
     	
     	//package file for sending
 		FilePacket f = new FilePacket();
@@ -40,7 +41,7 @@ public class SendDriver {
 		System.out.println("Actual array checksum - " + Arrays.toString(f.fileChecksum));
 		
 		//send file
-		s.sendData(f);
+		s.sendData(f, "key.txt");
 		
 		s.readText();
     	System.out.println("Done reading");

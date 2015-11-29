@@ -74,13 +74,13 @@ public class Sender implements Runnable{
  
 
   //used this method to sendData encrypted bytes to receiver.
-  public void sendData(FilePacket sendData) {
+  public void sendData(FilePacket sendData, String keyname ) {
 	  try{
 //		  clearBuffer();
 		  
 		  //create byte array the length of the file we are sending
 		  //can specify the length of the array to sendData in chunks, here 1000 bytes = 1kb chunks
-		  byte[] data = new byte[1000];
+		  byte[] data = new byte[10000];
 		  			  
 		  ByteArrayInputStream bis = new ByteArrayInputStream(sendData.fileArray);
 		  
@@ -91,7 +91,9 @@ public class Sender implements Runnable{
 		  
 		  byte[] chunkChecksum = new byte[16];
 		  int bytes = bis.read(data, 0, data.length);
+		  int count = 0;
 		  while(bytes != -1){
+			  System.out.println("Sending chunk - " + count++);
 			  //chunkChecksum sum the 1kb chunk 'data'
 			  chunkChecksum = saltMD5.computeMD5(data);
 			  
@@ -107,8 +109,8 @@ public class Sender implements Runnable{
 			  //write the chunk to the output stream, encrypted
 //			  os.write(data);
 //			  os.write(chunkChecksum);
-			  os.write(XOREncoding.encode(data, "key.txt"));
-			  os.write(XOREncoding.encode(chunkChecksum, "key.txt"));
+			  os.write(XOREncoding.encode(data, keyname));
+			  os.write(XOREncoding.encode(chunkChecksum, keyname));
 			  
 			  //clear data on the byte output stream
 			  os.flush();
@@ -185,14 +187,19 @@ public class Sender implements Runnable{
 			BufferedReader readText = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			
 			String clientText = "";
-			while(!clientText.trim().equals("Finshed = True")){
+			
+			while(!clientText.equals("Finished = True")){
+				while(!readText.ready());
+				
 				clientText = readText.readLine();
 				
 				//change this preform an action if a certian string is read
 				//ie if it reads "Encryption = True" set some boolean Encryption to true
-				if(clientText != null && !clientText.equals("Finshed = True")){
+				if(clientText != null && !clientText.equals("Finished = True")){
 					messages.add(clientText);
 				}
+				else
+					continue;
 			}
 		}
 		catch(IOException ioe){
