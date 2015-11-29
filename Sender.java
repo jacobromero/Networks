@@ -4,7 +4,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 
-public class Sender implements Runnable{
+public class Sender{
 	protected String url;
 	protected int port;
     private Socket socket = null;
@@ -32,9 +32,9 @@ public class Sender implements Runnable{
     public Sender(String ip){
     	this.url = ip;
     }
+    //End Constructors
     
-    
-	public void searchForClients(){
+	public boolean searchForClients(){
 		//need to change so the user can change port number
 		while(port == -1){
 			System.out.println("Please set a port to listen on.");
@@ -46,11 +46,13 @@ public class Sender implements Runnable{
 				socket = new Socket(url, port);
 				socket.setSoTimeout(0);
 				
-				System.out.println("Connected.");
-				
 				//open printwriter for writing to socket
 				pw = new PrintWriter(socket.getOutputStream(), true);
+				System.out.println("Connected.");
 				flag = false;
+				
+				//stop searching for clients when connection is made.
+				return flag;
 			} catch (ConnectException e) {
 				//continue to search for server with specified ip and port open
 				System.out.println("Continuing to listen...");
@@ -59,28 +61,18 @@ public class Sender implements Runnable{
 				System.out.println("Something unexpected happened... \n" + e.getMessage());
 			}
 		}
+		return false;
 	}
-  
-  public void closeConnection(){
-	  try {
-		System.out.println("closing connection");
-		socket.close();
-	} catch (IOException e) {
-		System.out.println("Something happened: " + e);
-	}
-  }
- 
 
   //used this method to sendData encrypted bytes to receiver.
-  public void sendData(FilePacket sendData) {
+  public void sendData(FilePacket sendData, String keyname, boolean asciiArmor ) {
 	  try{
 		  //create byte array the length of the file we are sending
 		  //can specify the length of the array to sendData in chunks, here 1000 bytes = 1kb chunks
-		  byte[] data = new byte[1000];
-		  			  
+		  byte[] data = new byte[20000];
+		  
+		  //Streams for reading/writing
 		  ByteArrayInputStream bis = new ByteArrayInputStream(sendData.fileArray);
-		  
-		  
 		  OutputStream os = socket.getOutputStream();
 		  
 		  //write the overall file checksum into the stream, to be read by the receiver. (this may or may not be corrupted on sender side
@@ -88,7 +80,10 @@ public class Sender implements Runnable{
 		  
 		  byte[] chunkChecksum = new byte[16];
 		  int bytes = bis.read(data, 0, data.length);
+		  
+		  int count = 0;
 		  while(bytes != -1){
+			  System.out.println("Sending Chunk - " + ++count);
 			  //chunkChecksum sum the 1kb chunk 'data'
 			  chunkChecksum = saltMD5.computeMD5(data);
 			  
@@ -100,18 +95,33 @@ public class Sender implements Runnable{
 				  failIntentionally = false;
 			  }
 			  
+			  //TODO implement ascii armoring
+			  if(asciiArmor){
+				  
+			  }
 			  
 			  //write the chunk to the output stream, encrypted
-			  os.write(XOREncoding.encode(data, "key.txt"));
-			  os.write(XOREncoding.encode(chunkChecksum, "key.txt"));
+			  os.write(XOREncoding.encode(data, keyname));
+			  os.write(XOREncoding.encode(chunkChecksum, keyname));
 			  
 			  //clear data on the byte output stream
 			  os.flush();
+			  
+			  readText();
+			  while (messages.remove().equals("Failed")){
+				//chunkChecksum sum the 1kb chunk 'data', re-checksummed for debug purposes.
+				chunkChecksum = saltMD5.computeMD5(data);
+				
+				os.write(XOREncoding.encode(data, keyname));
+				os.write(XOREncoding.encode(chunkChecksum, keyname));
+				os.flush();
+				
+				readText();
+			  }
 
 			  bytes = bis.read(data, 0, data.length);
 		  }
 		  
-		  os.close();
 		  bis.close();
 		  return;
 	    }
@@ -135,57 +145,58 @@ public class Sender implements Runnable{
 	      }
 	    }
   	}
-  
-  	public void sendText(String toSend){
-		pw.println(toSend);	
-  	}
   	
-	public void setServerUrl(String url){
-		this.url = url;
-	}
+  	//send text to other side
+  	public void sendText(String toSend){
+		pw.println(toSend);
+  	}
 	
-	public void setPort(int portNum){
-		this.port = portNum;
-	}
-
-	//async socket reader
-	public void run(){
+  	//method to read text form the other side
+	public void readText(){
+		//keep reading until other side passes sentinel string
+		read = true;
 		try{
 			BufferedReader readText = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			
 			String clientText = "";
-
-			while(read){
+			while(!clientText.equals("Finished = True")){
+				//keep looping until socket can be read from
+				while(!readText.ready());
+				
 				clientText = readText.readLine();
 				
-				//change this preform an action if a certian string is read
-				//ie if it reads "Encryption = True" set some boolean Encryption to true
-				if(clientText != null)
+				if(clientText != null && !clientText.equals("Finished = True")){
+					//add messages onto queue for main program to handle.
 					messages.add(clientText);
+				}
+				//if the string is null just keep reading
 				else
-					return;
-			}			
+					continue;
+			}
 		}
 		catch(IOException ioe){
 			ioe.getMessage();
 		}
 	}
 	
-	public void stopReadingText(){
-		read = false;
+	//url mutator
+	public void setServerUrl(String url){
+		this.url = url;
 	}
 	
-	public void restartReadingText(){
-		read = true;
+	//port mutator
+	public void setPort(int portNum){
+		this.port = portNum;
 	}
 	
-	public void shutDown(){		
-		try {
-			System.out.println("\nDisconnecting...");
-			socket.close();
-			System.out.println("Done.");
-		} catch (IOException e) {
-			e.printStackTrace();
+	//shutdown socket
+		public boolean shutDown(){		
+			try {
+				socket.close();
+				return true;
+			} catch (IOException e) {
+				e.printStackTrace();
+				return false;
+			}
 		}
-	}
 } 
