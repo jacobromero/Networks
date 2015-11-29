@@ -41,7 +41,7 @@ public class SendDriver {
 		System.out.println("Actual array checksum - " + Arrays.toString(f.fileChecksum));
 		
 		//send file
-		s.sendData(f, "key.txt");
+		s.sendData(f, "key.txt", false);
 		
 		s.readText();
     	System.out.println("Done reading");

@@ -94,7 +94,7 @@ public class FileSend {
 					System.out.println( "DEBUG: Key Path is " + FilePath );
 					s.readText();
 					if ( s.messages.remove().equals( "Send the file over" ) ) {
-						s.sendData( packet, KeyPath );
+						s.sendData( packet, KeyPath, false );
 						System.out.println( "Done sending" );
 						AsciiArmour.setEnabled( false );
 					}

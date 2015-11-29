@@ -76,7 +76,7 @@ public class Receiver implements Runnable{
 			for(int i = 0; i < chunks; i++){
 				buf.read(data);
 //				buf.read(chunkcheck);
-//				baos.write(data);
+				baos.write(data);
 			}
 			
 			buf.read(data, 0, lastChunk);

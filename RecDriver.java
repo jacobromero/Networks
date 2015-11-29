@@ -43,7 +43,7 @@ public class RecDriver {
 		r.sendText("Send File = True");
 				
 		//receive file
-		FilePacket fp = r.receiveData("key.txt");
+		FilePacket fp = r.receiveData("key.txt", false);
 		
 		//check if receiving file failed, and tell sender
 		if(fp == null){

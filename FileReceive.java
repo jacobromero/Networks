@@ -177,7 +177,7 @@ public class FileReceive {
 				System.out.println( "DEBUG: Key Path is " + KeyPath );
 				r.sendText( "Send the file over" );
 				r.sendText( "Finished = True" );
-				FilePacket packet = r.receiveData( KeyPath );
+				FilePacket packet = r.receiveData( KeyPath, false );
 				if ( packet == null ) {
 					System.out.println( "The file length is supposedly " + r.fileLength );
 					System.out.println( "We got nothing" );
